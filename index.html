@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Paradox Framework Explorer</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Visualization & Content Choices:
         - Introduction: Text, highlighted terms (hover for definition - simplified to bold for this version). Goal: Inform. Method: HTML/CSS.
         - Foundational Paradoxes: Text for each, HTML Table 1. Conceptual diagram of interconnectedness (HTML/CSS boxes with arrows). Goal: Inform, Compare. Method: HTML/CSS/JS for diagram.
@@ -16,25 +17,66 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
+            scroll-behavior: smooth;
         }
         .content-section {
             display: none;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
         }
         .content-section.active {
             display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .nav-link {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: #f59e0b;
+            transition: width 0.3s ease;
+        }
+        .nav-link:hover::after {
+            width: 100%;
         }
         .nav-link.active {
-            background-color: #f59e0b; /* amber-500 */
+            background-color: #f59e0b;
             color: white;
+            transform: translateX(10px);
         }
-        /* Simple arrow for diagrams */
+        .nav-link.active::after {
+            display: none;
+        }
+        .diagram-box {
+            border: 2px solid #d97706;
+            padding: 0.75rem;
+            margin: 0.5rem;
+            border-radius: 0.375rem;
+            background-color: #fffbeb;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .diagram-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
         .arrow {
             position: relative;
             display: inline-block;
             width: 20px;
             height: 2px;
-            background-color: #78350f; /* amber-800 */
+            background-color: #78350f;
             margin: 0 10px;
+            transition: width 0.3s ease;
         }
         .arrow::after {
             content: '';
@@ -45,30 +87,36 @@
             height: 0;
             border-top: 4px solid transparent;
             border-bottom: 4px solid transparent;
-            border-left: 6px solid #78350f; /* amber-800 */
+            border-left: 6px solid #78350f;
+            transition: all 0.3s ease;
         }
-        .diagram-box {
-            border: 2px solid #d97706; /* amber-600 */
-            padding: 0.75rem;
-            margin: 0.5rem;
-            border-radius: 0.375rem;
-            background-color: #fffbeb; /* amber-50 */
-            text-align: center;
+        .diagram-box:hover + .arrow {
+            width: 30px;
         }
         .table-responsive {
             overflow-x: auto;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        .table-responsive:hover {
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
         }
         table {
             width: 100%;
             border-collapse: collapse;
         }
         th, td {
-            border: 1px solid #e5e7eb; /* gray-200 */
+            border: 1px solid #e5e7eb;
             padding: 0.75rem;
             text-align: left;
+            transition: background-color 0.3s ease;
         }
         th {
-            background-color: #fef3c7; /* amber-100 */
+            background-color: #fef3c7;
+        }
+        tr:hover td {
+            background-color: #fffbeb;
         }
         .chart-container {
             position: relative;
@@ -77,9 +125,61 @@
             margin-left: auto;
             margin-right: auto;
             height: auto;
-            min-height: 200px; /* Ensure some height for diagrams */
-            max-height: 500px; /* Control max height */
+            min-height: 200px;
+            max-height: 500px;
             padding: 1rem;
+            transition: all 0.3s ease;
+        }
+        .chart-container:hover {
+            transform: scale(1.02);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .section-title {
+            position: relative;
+            display: inline-block;
+        }
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 3px;
+            background-color: #f59e0b;
+            transition: width 0.5s ease;
+        }
+        .section-title:hover::after {
+            width: 100%;
+        }
+        .highlight-box {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .highlight-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .scroll-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #f59e0b;
+            color: white;
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+        }
+        .scroll-indicator.visible {
+            opacity: 1;
         }
     </style>
 </head>
@@ -305,11 +405,30 @@
     document.addEventListener('DOMContentLoaded', function () {
         const navLinks = document.querySelectorAll('.nav-link');
         const sections = document.querySelectorAll('main section');
+        const scrollIndicator = document.createElement('div');
+        scrollIndicator.className = 'scroll-indicator';
+        scrollIndicator.innerHTML = '↑';
+        document.body.appendChild(scrollIndicator);
+
+        // Add fade-in class to all sections
+        sections.forEach(section => {
+            section.classList.add('fade-in');
+        });
+
+        // Add highlight-box class to all boxes
+        document.querySelectorAll('.p-4.border.border-amber-300.rounded-lg.bg-amber-50').forEach(box => {
+            box.classList.add('highlight-box');
+        });
+
+        // Add section-title class to all h2 elements
+        document.querySelectorAll('h2').forEach(title => {
+            title.classList.add('section-title');
+        });
 
         function updateActiveLink() {
             let currentSectionId = '';
             sections.forEach(section => {
-                const sectionTop = section.offsetTop - 100; // Adjusted for fixed header/scroll margin
+                const sectionTop = section.offsetTop - 100;
                 if (window.scrollY >= sectionTop) {
                     currentSectionId = section.getAttribute('id');
                 }
@@ -323,17 +442,69 @@
             });
         }
 
-        navLinks.forEach(link => {
-            link.addEventListener('click', function (e) {
-                // Basic smooth scroll, browser handles if supported by html class 'scroll-smooth'
-                // For more complex SPA behavior, you'd preventDefault and manage content visibility.
-                // Here, we just ensure the active class updates quickly on click for visual feedback.
-                setTimeout(updateActiveLink, 50); // Allow scroll to start
+        // Smooth scroll to top
+        scrollIndicator.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
             });
         });
 
+        // Show/hide scroll indicator
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) {
+                scrollIndicator.classList.add('visible');
+            } else {
+                scrollIndicator.classList.remove('visible');
+            }
+        });
+
+        // Enhanced click handling for nav links
+        navLinks.forEach(link => {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href').substring(1);
+                const targetSection = document.getElementById(targetId);
+                
+                window.scrollTo({
+                    top: targetSection.offsetTop - 80,
+                    behavior: 'smooth'
+                });
+
+                setTimeout(updateActiveLink, 50);
+            });
+        });
+
+        // Intersection Observer for fade-in animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, {
+            threshold: 0.1
+        });
+
+        // Observe all sections and boxes
+        sections.forEach(section => observer.observe(section));
+        document.querySelectorAll('.highlight-box').forEach(box => observer.observe(box));
+
+        // Add hover effect to table rows
+        document.querySelectorAll('table tbody tr').forEach(row => {
+            row.addEventListener('mouseenter', () => {
+                row.style.transform = 'scale(1.01)';
+                row.style.transition = 'transform 0.3s ease';
+            });
+            row.addEventListener('mouseleave', () => {
+                row.style.transform = 'scale(1)';
+            });
+        });
+
+        // Initialize active link
+        updateActiveLink();
         window.addEventListener('scroll', updateActiveLink);
-        updateActiveLink(); // Initial call to set active link on page load
     });
 </script>
 
