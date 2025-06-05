@@ -193,7 +193,7 @@
             <li><a href="#foundational" class="nav-link block py-2 px-3 rounded hover:bg-amber-200 transition-colors duration-200">Foundational Paradoxes</a></li>
             <li><a href="#constructive" class="nav-link block py-2 px-3 rounded hover:bg-amber-200 transition-colors duration-200">Constructive Paradigm</a></li>
             <li><a href="#interdisciplinary" class="nav-link block py-2 px-3 rounded hover:bg-amber-200 transition-colors duration-200">Interdisciplinary Manifestations</a></li>
-            <li><a href="#unified" class="nav-link block py-2 px-3 rounded hover:bg-amber-200 transition-colors duration-200">Unified Paradox Framework & Future</a></li>
+            <li><a href="#unified-framework" class="nav-link block py-2 px-3 rounded hover:bg-amber-200 transition-colors duration-200">Unified Paradox Framework & Future</a></li>
         </ul>
     </nav>
 
@@ -372,7 +372,7 @@
             <p class="mt-4 leading-relaxed">The approach to "resolution" or "management" varies: logical elimination in formal systems, acceptance and navigation in organizational theory, and system design accommodation in cognitive science. This highlights the context-dependency of addressing paradoxes.</p>
         </section>
 
-        <section id="unified" class="mb-12 scroll-mt-20">
+        <section id="unified-framework" class="mb-12 scroll-mt-20">
             <h2 class="text-3xl font-semibold text-amber-700 mb-4">V. Unified Paradox Framework: Synthesis and Future Directions</h2>
             <p class="mb-6 text-lg leading-relaxed">This concluding section synthesizes the diverse perspectives into a cohesive "Paradox Framework." It emphasizes self-reference as a central theme, the universal nature of tension in paradoxes, and the shift towards engagement rather than mere elimination. The framework integrates analytical and constructive approaches, offering tools for diagnosis and strategy selection.</p>
 
@@ -410,6 +410,13 @@
         scrollIndicator.innerHTML = '↑';
         document.body.appendChild(scrollIndicator);
 
+        // Cache section positions
+        const sectionPositions = Array.from(sections).map(section => ({
+            id: section.id,
+            top: section.offsetTop,
+            bottom: section.offsetTop + section.offsetHeight
+        }));
+
         // Add fade-in class to all sections
         sections.forEach(section => {
             section.classList.add('fade-in');
@@ -425,53 +432,97 @@
             title.classList.add('section-title');
         });
 
-        function updateActiveLink() {
-            let currentSectionId = '';
-            sections.forEach(section => {
-                const sectionTop = section.offsetTop - 100;
-                if (window.scrollY >= sectionTop) {
-                    currentSectionId = section.getAttribute('id');
+        // Throttle function to limit scroll event firing
+        function throttle(func, limit) {
+            let inThrottle;
+            return function() {
+                const args = arguments;
+                const context = this;
+                if (!inThrottle) {
+                    func.apply(context, args);
+                    inThrottle = true;
+                    setTimeout(() => inThrottle = false, limit);
                 }
-            });
-
-            navLinks.forEach(link => {
-                link.classList.remove('active');
-                if (link.getAttribute('href') === `#${currentSectionId}`) {
-                    link.classList.add('active');
-                }
-            });
+            }
         }
 
-        // Smooth scroll to top
+        function updateActiveLink() {
+            const scrollPosition = window.scrollY + 100;
+            
+            // Find current section using cached positions
+            const currentSection = sectionPositions.find(section => 
+                scrollPosition >= section.top && scrollPosition < section.bottom
+            );
+
+            if (currentSection) {
+                navLinks.forEach(link => {
+                    const linkHref = link.getAttribute('href').substring(1);
+                    if (linkHref === currentSection.id) {
+                        link.classList.add('active');
+                    } else {
+                        link.classList.remove('active');
+                    }
+                });
+            }
+        }
+
+        // Smooth scroll to top with requestAnimationFrame
         scrollIndicator.addEventListener('click', () => {
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
+            const scrollToTop = () => {
+                const currentPosition = window.scrollY;
+                if (currentPosition > 0) {
+                    window.scrollTo(0, currentPosition - currentPosition / 8);
+                    requestAnimationFrame(scrollToTop);
+                }
+            };
+            requestAnimationFrame(scrollToTop);
         });
 
-        // Show/hide scroll indicator
-        window.addEventListener('scroll', () => {
+        // Show/hide scroll indicator with throttling
+        window.addEventListener('scroll', throttle(() => {
             if (window.scrollY > 300) {
                 scrollIndicator.classList.add('visible');
             } else {
                 scrollIndicator.classList.remove('visible');
             }
-        });
+        }, 100));
 
-        // Enhanced click handling for nav links
+        // Enhanced click handling for nav links with smooth scroll
         navLinks.forEach(link => {
             link.addEventListener('click', function (e) {
                 e.preventDefault();
                 const targetId = this.getAttribute('href').substring(1);
                 const targetSection = document.getElementById(targetId);
                 
-                window.scrollTo({
-                    top: targetSection.offsetTop - 80,
-                    behavior: 'smooth'
-                });
+                if (targetSection) {
+                    // Smooth scroll with requestAnimationFrame
+                    const targetPosition = targetSection.offsetTop - 80;
+                    const startPosition = window.scrollY;
+                    const distance = targetPosition - startPosition;
+                    const duration = 500; // ms
+                    let start = null;
 
-                setTimeout(updateActiveLink, 50);
+                    function animation(currentTime) {
+                        if (start === null) start = currentTime;
+                        const timeElapsed = currentTime - start;
+                        const progress = Math.min(timeElapsed / duration, 1);
+                        const easeInOutCubic = progress => progress < 0.5
+                            ? 4 * progress * progress * progress
+                            : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+                        window.scrollTo(0, startPosition + distance * easeInOutCubic(progress));
+
+                        if (timeElapsed < duration) {
+                            requestAnimationFrame(animation);
+                        }
+                    }
+
+                    requestAnimationFrame(animation);
+
+                    // Update active link immediately
+                    navLinks.forEach(navLink => navLink.classList.remove('active'));
+                    this.classList.add('active');
+                }
             });
         });
 
@@ -484,7 +535,8 @@
                 }
             });
         }, {
-            threshold: 0.1
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
         });
 
         // Observe all sections and boxes
@@ -504,7 +556,8 @@
 
         // Initialize active link
         updateActiveLink();
-        window.addEventListener('scroll', updateActiveLink);
+        // Use throttled scroll event listener
+        window.addEventListener('scroll', throttle(updateActiveLink, 100));
     });
 </script>
 
