@@ -6,6 +6,7 @@
     <title>Interactive Paradox Framework Explorer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>��</text></svg>">
     <!-- Visualization & Content Choices:
         - Introduction: Text, highlighted terms (hover for definition - simplified to bold for this version). Goal: Inform. Method: HTML/CSS.
         - Foundational Paradoxes: Text for each, HTML Table 1. Conceptual diagram of interconnectedness (HTML/CSS boxes with arrows). Goal: Inform, Compare. Method: HTML/CSS/JS for diagram.
@@ -455,12 +456,12 @@
             );
 
             if (currentSection) {
-                navLinks.forEach(link => {
+            navLinks.forEach(link => {
                     const linkHref = link.getAttribute('href').substring(1);
                     if (linkHref === currentSection.id) {
                         link.classList.add('active');
                     } else {
-                        link.classList.remove('active');
+                link.classList.remove('active');
                     }
                 });
             }
@@ -484,7 +485,7 @@
                 scrollIndicator.classList.add('visible');
             } else {
                 scrollIndicator.classList.remove('visible');
-            }
+                }
         }, 100));
 
         // Enhanced click handling for nav links with smooth scroll
